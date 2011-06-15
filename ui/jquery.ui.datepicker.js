@@ -56,6 +56,7 @@ function Datepicker() {
 		firstDay: 0, // The first day of the week, Sun = 0, Mon = 1, ...
 		isRTL: false, // True if right-to-left language, false if left-to-right
 		showMonthAfterYear: false, // True if the year select precedes month, false for month then year
+		showTrailingWeek: true, // False if last week is suppressed if it contains days from the next month
 		yearSuffix: '' // Additional text to append to the year in the month headers
 	};
 	this._defaults = { // Global defaults for all the date picker instances
@@ -1291,6 +1292,19 @@ $.extend(Datepicker.prototype, {
 		inst.currentDay = (dates ? date.getDate() : 0);
 		inst.currentMonth = (dates ? date.getMonth() : 0);
 		inst.currentYear = (dates ? date.getFullYear() : 0);
+		var showTrailingWeek = this._get(inst, 'showTrailingWeek');
+		if (!showTrailingWeek){
+			var firstDay = parseInt(this._get(inst, 'firstDay'),10);
+			firstDay = (isNaN(firstDay) ? 0 : firstDay);
+			var daysInMonth = this._getDaysInMonth(inst.drawYear, inst.drawMonth);
+			var leadDays = (this._getFirstDayOfMonth(inst.drawYear, inst.drawMonth) - firstDay + 7) % 7;
+			var numRowsForMonth = Math.floor((leadDays + daysInMonth) / 7);
+			var selectedDay = Math.min(inst.selectedDay, daysInMonth);
+			var numRowsForDate = Math.ceil((leadDays + selectedDay) / 7);
+			if (numRowsForMonth < numRowsForDate){
+				inst.drawMonth = (inst.drawMonth + 1) %12;
+			}
+		}
 		this._adjustInstDate(inst);
 	},
 
@@ -1466,6 +1480,7 @@ $.extend(Datepicker.prototype, {
 		var beforeShowDay = this._get(inst, 'beforeShowDay');
 		var showOtherMonths = this._get(inst, 'showOtherMonths');
 		var selectOtherMonths = this._get(inst, 'selectOtherMonths');
+		var showTrailingWeek = this._get(inst, 'showTrailingWeek');
 		var calculateWeek = this._get(inst, 'calculateWeek') || this.iso8601Week;
 		var defaultDate = this._getDefaultDate(inst);
 		var html = '';
@@ -1505,7 +1520,7 @@ $.extend(Datepicker.prototype, {
 				if (drawYear == inst.selectedYear && drawMonth == inst.selectedMonth)
 					inst.selectedDay = Math.min(inst.selectedDay, daysInMonth);
 				var leadDays = (this._getFirstDayOfMonth(drawYear, drawMonth) - firstDay + 7) % 7;
-				var numRows = (isMultiMonth ? 6 : Math.ceil((leadDays + daysInMonth) / 7)); // calculate the number of rows to generate
+				var numRows = (showTrailingWeek ? (isMultiMonth ? 6 : Math.ceil((leadDays + daysInMonth) / 7) ) : Math.floor((leadDays + daysInMonth) / 7)); // calculate the number of rows to generate
 				var printDate = this._daylightSavingAdjust(new Date(drawYear, drawMonth, 1 - leadDays));
 				for (var dRow = 0; dRow < numRows; dRow++) { // create date picker rows
 					calender += '<tr>';
